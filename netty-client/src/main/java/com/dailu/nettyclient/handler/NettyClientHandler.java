@@ -8,7 +8,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -19,11 +18,9 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Slf4j
 @Setter
-public class NettyClientHandler extends ChannelInboundHandlerAdapter implements Callable<String> {
+public class NettyClientHandler extends ChannelInboundHandlerAdapter {
 
     private ChannelHandlerContext context;
-    private ClassInfo classInfo;
-
 
     /**
      *服务端返回的结果
@@ -79,16 +76,4 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter implements 
         log.error(cause.getMessage(),cause);
     }
 
-    @Override
-    public String call() throws Exception {
-        lock.lock();
-        final String s = ApplicationContextHolder.getBean(ObjectMapper.class)
-                .orElseGet(ObjectMapper::new).writeValueAsString(classInfo);
-        context.writeAndFlush(s);
-        log.info("client发出数据:" + s);
-        //向服务端发送消息后等待channelRead中接收到消息后唤醒
-        condition.await();
-        lock.unlock();
-        return result;
-    }
 }
