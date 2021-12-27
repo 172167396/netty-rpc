@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="netty-common-1.0.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../springboot/netty-common/target/netty-common-1.0.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
