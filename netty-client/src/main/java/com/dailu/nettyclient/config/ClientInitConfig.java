@@ -1,5 +1,6 @@
 package com.dailu.nettyclient.config;
 
+import com.dailu.nettyclient.handler.AnotherHandler;
 import com.dailu.nettyclient.handler.NettyClientHandler;
 import com.dailu.nettycommon.decoder.MyMessageDecoder;
 import com.dailu.nettycommon.encoder.MyMessageEncoder;
@@ -10,6 +11,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
@@ -20,11 +23,13 @@ import org.springframework.scheduling.annotation.Async;
 public class ClientInitConfig implements CommandLineRunner {
 
     public static NettyClientHandler nettyClientHandler;
+    public static AnotherHandler anotherHandler;
 
     @Async
     @Override
     public void run(String... args) {
         nettyClientHandler = new NettyClientHandler();
+        anotherHandler = new AnotherHandler();
         //客户端需要一个事件循环组就可以
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         try {
@@ -36,10 +41,15 @@ public class ClientInitConfig implements CommandLineRunner {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
+                            AttributeKey<String> attributeKey = AttributeKey.valueOf("clientId");
+                            ch.attr(attributeKey).set("client001");
+                            log.debug("client channel id is " + ch.id());
                             ch.pipeline()
                                     .addLast(new MyMessageDecoder())
                                     .addLast(new MyMessageEncoder())
-                                    .addLast(nettyClientHandler); //加入自己的处理器
+                                    .addLast(nettyClientHandler);//加入自己的处理器
+//                                    .addLast(anotherHandler);
+                            log.debug("client channel初始化.....");
                         }
                     });
             log.info("client is ready!");
@@ -48,7 +58,7 @@ public class ClientInitConfig implements CommandLineRunner {
             //对关闭通道进行监听
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            log.debug("client连接终止，{}", e.getMessage(), e);
         } finally {
             group.shutdownGracefully();
         }

@@ -1,5 +1,7 @@
 package com.dailu.nettyclient.controller;
 
+import com.dailu.nettyclient.config.ClientInitConfig;
+import com.dailu.nettyclient.handler.NettyClientHandler;
 import com.dailu.nettyclient.rpc.UserService;
 import com.dailu.nettycommon.entity.UserDTO;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +19,11 @@ public class UserController {
     @GetMapping("/getUser/{id}")
     public UserDTO get(@PathVariable String id){
         return userService.getUser(id);
+    }
+
+    @GetMapping("/send/{msg}")
+    public String send(@PathVariable String msg) throws Exception {
+        return ClientInitConfig.nettyClientHandler.send(msg);
     }
 
 }

@@ -10,4 +10,9 @@ public class UserServiceImpl implements UserService {
     public UserDTO getUser(String id) {
         return new UserDTO(id,"张三","安徽合肥");
     }
+
+    @Override
+    public String sendMsg(String msg) {
+        return "server端已收到！";
+    }
 }
