@@ -1,6 +1,6 @@
 package com.dailu.nettyclient;
 
-import com.dailu.nettyclient.config.RpcInitConfig;
+import com.dailu.nettyclient.config.CustomBeanDefinitionRegistrar;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.SpringApplication;
@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
-@Import(RpcInitConfig.class)
+@Import(CustomBeanDefinitionRegistrar.class)
 @EnableAsync
 public class NettyClientApplication {
 

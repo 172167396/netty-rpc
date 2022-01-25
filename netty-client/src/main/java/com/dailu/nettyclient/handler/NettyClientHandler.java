@@ -8,6 +8,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -21,9 +22,8 @@ import java.util.concurrent.locks.ReentrantLock;
 public class NettyClientHandler extends ChannelInboundHandlerAdapter {
 
     public static ChannelHandlerContext context;
-
     /**
-     *服务端返回的结果
+     * 服务端返回的结果
      */
     private String result;
     /**
@@ -34,7 +34,6 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
      * 精准唤醒 execute中的等待
      */
     private final Condition condition = lock.newCondition();
-
 
     //通道连接时，就将上下文保存下来，因为这样其他函数也可以用
     @Override
@@ -61,15 +60,24 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
         lock.unlock();
     }
 
-    public String execute(ClassInfo classInfo) throws Exception {
+    public String execute(ClassInfo classInfo) {
         lock.lock();
-        final String s = ApplicationContextHolder.getBean(ObjectMapper.class).orElseGet(ObjectMapper::new).writeValueAsString(classInfo);
-        context.writeAndFlush(s);
-        log.info("client发出数据:" + s);
-        //向服务端发送消息后等待channelRead中接收到消息后唤醒
-        condition.await();
-        lock.unlock();
-        return result;
+        try {
+            if ("user001".equals(classInfo.getParams()[0])) {
+                throw new RuntimeException();
+            }
+            String s = ApplicationContextHolder.getBean(ObjectMapper.class)
+                    .orElseGet(ObjectMapper::new).writeValueAsString(classInfo);
+            context.writeAndFlush(s);
+            log.info("client发出数据:" + s);
+            //向服务端发送消息后等待channelRead中接收到消息后唤醒
+            condition.await();
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
     }
 
     public String send(String msg) throws Exception {
@@ -85,7 +93,7 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
     //异常处理
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error(cause.getMessage(),cause);
+        log.error(cause.getMessage(), cause);
     }
 
 }

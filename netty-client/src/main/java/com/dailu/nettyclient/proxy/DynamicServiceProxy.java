@@ -1,5 +1,6 @@
 package com.dailu.nettyclient.proxy;
 
+import com.dailu.nettyclient.utils.ThreadPoolUtil;
 import com.dailu.nettycommon.dto.ClassInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.cglib.proxy.MethodProxy;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.concurrent.Future;
 
 import static com.dailu.nettyclient.config.ClientInitConfig.nettyClientHandler;
 
@@ -35,21 +37,11 @@ public class DynamicServiceProxy implements MethodInterceptor {
             result = nettyClientHandler.execute(classInfo);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            return null;
+            Class<?> type = (Class<?>) method.getAnnotatedReturnType().getType();
+            return type.newInstance();
         }
         Type returnType = method.getAnnotatedReturnType().getType();
         return new ObjectMapper().readValue(result, (Class<?>) returnType);
-//        try{
-//            //运行线程，发送数据
-//            Future<String> future = ThreadPoolUtil.threadPoolExecutor.submit(nettyClientHandler);
-//            //返回结果
-//            result = future.get();
-//        } catch (Exception e){
-//            log.error(e.getMessage(),e);
-//            return null;
-//        }
-//        Type returnType = method.getAnnotatedReturnType().getType();
-//        return new ObjectMapper().readValue(result, (Class<?>) returnType);
     }
 
 }

@@ -16,7 +16,7 @@ import org.springframework.util.ObjectUtils;
 import java.util.Map;
 import java.util.Set;
 
-public class RpcInitConfig implements ImportBeanDefinitionRegistrar {
+public class CustomBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar {
 
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
@@ -30,6 +30,7 @@ public class RpcInitConfig implements ImportBeanDefinitionRegistrar {
                 //获得注解上的参数信息
                 AnnotatedBeanDefinition annotatedBeanDefinition = (AnnotatedBeanDefinition) beanDefinition;
                 String beanClassAllName = beanDefinition.getBeanClassName();
+                if(beanClassAllName == null) continue;
                 Map<String, Object> paraMap = annotatedBeanDefinition.getMetadata()
                         .getAnnotationAttributes(RpcClient.class.getCanonicalName());
                 //将RpcClient的工厂类注册进去
