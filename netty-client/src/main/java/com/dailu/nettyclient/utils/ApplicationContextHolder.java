@@ -1,5 +1,6 @@
 package com.dailu.nettyclient.utils;
  
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -21,6 +22,10 @@ public class ApplicationContextHolder implements ApplicationContextAware, Initia
 
     public static <T> Optional<T> getBean(Class<T> tClass){
         return Optional.of(applicationContext.getBean(tClass));
+    }
+
+    public static ObjectMapper getObjectMapper(){
+        return getBean(ObjectMapper.class).orElseGet(ObjectMapper::new);
     }
 
     @Override

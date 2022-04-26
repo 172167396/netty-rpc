@@ -1,6 +1,5 @@
 package com.dailu.nettyserver.handler;
 
-import com.dailu.nettycommon.dto.ClassInfo;
 import com.dailu.nettyserver.config.InitServiceConfig;
 import com.dailu.nettyserver.serve.ApplicationContextHolder;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -23,7 +23,7 @@ public class UserController {
 
     @GetMapping("/send/{msg}")
     public String send(@PathVariable String msg) throws Exception {
-        return ClientInitConfig.nettyClientHandler.send(msg);
+        return null;
     }
 
 }

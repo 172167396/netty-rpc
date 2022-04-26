@@ -1,6 +1,7 @@
 package com.dailu.nettyserver.handler;
 
-import com.dailu.nettycommon.dto.ClassInfo;
+import com.dailu.nettycommon.dto.RequestInfo;
+import com.dailu.nettycommon.dto.ResponseInfo;
 import com.dailu.nettyserver.config.InitServiceConfig;
 import com.dailu.nettyserver.serve.ApplicationContextHolder;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,17 +53,17 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
             String s = (String) msg;
             log.debug("handler 1 received " + s);
             ObjectMapper objectMapper = ApplicationContextHolder.getBean(ObjectMapper.class).orElseGet(ObjectMapper::new);
-            ClassInfo classInfo = objectMapper.readValue(s, ClassInfo.class);
+            RequestInfo requestInfo = objectMapper.readValue(s, RequestInfo.class);
             //确认是rpc调用才往下执行
-            if (classInfo != null && "#rpc#".equals(classInfo.getProtocol())) {
+            if (requestInfo != null && "#rpc#".equals(requestInfo.getProtocol())) {
                 //反射调用实现类的方法
-                String name = classInfo.getName();
+                String name = requestInfo.getClassName();
                 Object service = InitServiceConfig.serviceMap.get(name);
-                Method method = service.getClass().getDeclaredMethod(classInfo.getMethodName(), classInfo.getTypes());
-                Object result = method.invoke(service, classInfo.getParams());
-                String resultStr = objectMapper.writeValueAsString(result);
-                ctx.writeAndFlush(resultStr);
-                log.info("server端返回：" + resultStr);
+                Method method = service.getClass().getDeclaredMethod(requestInfo.getMethodName(), requestInfo.getParamTypes());
+                Object result = method.invoke(service, requestInfo.getParams());
+                String response = objectMapper.writeValueAsString(new ResponseInfo(requestInfo.getUuid(),result));
+                ctx.writeAndFlush(response);
+                log.info("server端返回：" + response);
             }
         } catch (Exception e) {
             log.error(e.getMessage(), e);

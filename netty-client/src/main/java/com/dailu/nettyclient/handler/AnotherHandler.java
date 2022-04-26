@@ -1,7 +1,7 @@
 package com.dailu.nettyclient.handler;
 
 import com.dailu.nettyclient.utils.ApplicationContextHolder;
-import com.dailu.nettycommon.dto.ClassInfo;
+import com.dailu.nettycommon.dto.RequestInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -60,7 +60,7 @@ public class AnotherHandler extends ChannelInboundHandlerAdapter {
         lock.unlock();
     }
 
-    public String execute(ClassInfo classInfo) throws Exception {
+    public String execute(RequestInfo classInfo) throws Exception {
         lock.lock();
         final String s = ApplicationContextHolder.getBean(ObjectMapper.class).orElseGet(ObjectMapper::new).writeValueAsString(classInfo);
         context.writeAndFlush(s);

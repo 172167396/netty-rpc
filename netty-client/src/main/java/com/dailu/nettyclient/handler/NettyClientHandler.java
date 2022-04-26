@@ -1,16 +1,19 @@
 package com.dailu.nettyclient.handler;
 
 import com.dailu.nettyclient.utils.ApplicationContextHolder;
-import com.dailu.nettycommon.dto.ClassInfo;
+import com.dailu.nettyclient.utils.DefaultFuture;
+import com.dailu.nettycommon.dto.RequestInfo;
+import com.dailu.nettycommon.dto.ResponseInfo;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.concurrent.Callable;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -18,22 +21,23 @@ import java.util.concurrent.locks.ReentrantLock;
  * 所以实现了 Callable 接口，这样可以运行有返回值的线程
  */
 @Slf4j
-@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class NettyClientHandler extends ChannelInboundHandlerAdapter {
 
     public static ChannelHandlerContext context;
-    /**
-     * 服务端返回的结果
-     */
-    private String result;
+
+    private final Map<String, DefaultFuture> futureMap = new ConcurrentHashMap<>();
+
     /**
      * 使用锁将 channelRead和 execute 函数同步
      */
-    private final Lock lock = new ReentrantLock();
+    private ReentrantLock lock = new ReentrantLock();
     /**
      * 精准唤醒 execute中的等待
      */
-    private final Condition condition = lock.newCondition();
+    private Condition condition = lock.newCondition();
+
 
     //通道连接时，就将上下文保存下来，因为这样其他函数也可以用
     @Override
@@ -51,44 +55,15 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
     //当服务端返回消息时，将消息复制到类变量中，然后唤醒正在等待结果的线程，返回结果
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        lock.lock();
-        log.info("channel hashCode:" + ctx.channel().hashCode());
         log.info("收到服务端发送的消息:" + msg);
-        result = msg.toString();
-        //唤醒等待的线程
-        condition.signal();
-        lock.unlock();
-    }
-
-    public String execute(ClassInfo classInfo) {
-        lock.lock();
         try {
-            if ("user001".equals(classInfo.getParams()[0])) {
-                throw new RuntimeException();
-            }
-            String s = ApplicationContextHolder.getBean(ObjectMapper.class)
-                    .orElseGet(ObjectMapper::new).writeValueAsString(classInfo);
-            context.writeAndFlush(s);
-            log.info("client发出数据:" + s);
-            //向服务端发送消息后等待channelRead中接收到消息后唤醒
-            condition.await();
-            return result;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            lock.unlock();
+            ResponseInfo responseInfo = new ObjectMapper().readValue(msg.toString(), ResponseInfo.class);
+            futureMap.get(responseInfo.getRequestId()).setResponse(responseInfo);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
         }
     }
 
-    public String send(String msg) throws Exception {
-        lock.lock();
-        context.writeAndFlush(msg);
-        log.info("client发出数据:" + msg);
-        //向服务端发送消息后等待channelRead中接收到消息后唤醒
-        condition.await();
-        lock.unlock();
-        return result;
-    }
 
     //异常处理
     @Override
@@ -96,4 +71,31 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
         log.error(cause.getMessage(), cause);
     }
 
+
+    public String send(RequestInfo requestInfo) {
+        try {
+            if ("user001".equals(requestInfo.getParams()[0])) {
+                Thread.sleep(10000);
+            }
+            String s = ApplicationContextHolder.getObjectMapper().writeValueAsString(requestInfo);
+            futureMap.putIfAbsent(requestInfo.getUuid(), new DefaultFuture());
+            context.writeAndFlush(s).await();
+            log.info("client发出数据:" + s);
+            Object result = getRpcResponse(requestInfo.getUuid()).getResult();
+            return ApplicationContextHolder.getObjectMapper().writeValueAsString(result);
+        } catch (InterruptedException | JsonProcessingException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+    public ResponseInfo getRpcResponse(String requestId) {
+        try {
+            DefaultFuture future = futureMap.get(requestId);
+            return future.getRpcResponse(5000);
+        } finally {
+            //获取成功以后，从map中移除
+            futureMap.remove(requestId);
+        }
+    }
 }
