@@ -1,7 +1,7 @@
 package com.dailu.nettyclient.handler;
 
 import com.dailu.nettyclient.utils.ApplicationContextHolder;
-import com.dailu.nettyclient.utils.DefaultFuture;
+import com.dailu.nettyclient.utils.BlockedQueue;
 import com.dailu.nettycommon.dto.RequestInfo;
 import com.dailu.nettycommon.dto.ResponseInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -11,10 +11,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 由于需要在 handler 中发送消息给服务端，并且将服务端返回的消息读取后返回给消费者
@@ -27,19 +26,12 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
 
     public static ChannelHandlerContext context;
 
-    private final Map<String, DefaultFuture> futureMap = new ConcurrentHashMap<>();
+    private final Map<String, BlockedQueue<ResponseInfo>> futureMap = new ConcurrentHashMap<>();
+
 
     /**
-     * 使用锁将 channelRead和 execute 函数同步
+     * 通道连接时，就将上下文保存下来，因为这样其他函数也可以用
      */
-    private ReentrantLock lock = new ReentrantLock();
-    /**
-     * 精准唤醒 execute中的等待
-     */
-    private Condition condition = lock.newCondition();
-
-
-    //通道连接时，就将上下文保存下来，因为这样其他函数也可以用
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         log.debug("client channel is active..........");
@@ -57,10 +49,10 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         log.info("收到服务端发送的消息:" + msg);
         try {
-            ResponseInfo responseInfo = new ObjectMapper().readValue(msg.toString(), ResponseInfo.class);
-            futureMap.get(responseInfo.getRequestId()).setResponse(responseInfo);
+            ResponseInfo responseInfo = ApplicationContextHolder.getObjectMapper().readValue(msg.toString(), ResponseInfo.class);
+            futureMap.get(responseInfo.getRequestId()).add(responseInfo);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
         }
     }
 
@@ -74,27 +66,27 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
 
     public String send(RequestInfo requestInfo) {
         try {
+            //测试单个请求阻塞
             if ("user001".equals(requestInfo.getParams()[0])) {
                 Thread.sleep(10000);
             }
-            String s = ApplicationContextHolder.getObjectMapper().writeValueAsString(requestInfo);
-            futureMap.putIfAbsent(requestInfo.getUuid(), new DefaultFuture());
-            context.writeAndFlush(s).await();
+            ObjectMapper objectMapper = ApplicationContextHolder.getObjectMapper();
+            String s = objectMapper.writeValueAsString(requestInfo);
+            futureMap.putIfAbsent(requestInfo.getUuid(), new BlockedQueue<>());
+            context.writeAndFlush(s);
             log.info("client发出数据:" + s);
             Object result = getRpcResponse(requestInfo.getUuid()).getResult();
-            return ApplicationContextHolder.getObjectMapper().writeValueAsString(result);
+            return objectMapper.writeValueAsString(result);
         } catch (InterruptedException | JsonProcessingException e) {
-            e.printStackTrace();
-            return "";
+            log.error(e.getMessage(), e);
+            return null;
         }
     }
 
     public ResponseInfo getRpcResponse(String requestId) {
         try {
-            DefaultFuture future = futureMap.get(requestId);
-            return future.getRpcResponse(5000);
+            return futureMap.get(requestId).poll();
         } finally {
-            //获取成功以后，从map中移除
             futureMap.remove(requestId);
         }
     }

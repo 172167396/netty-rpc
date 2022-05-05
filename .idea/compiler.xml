@@ -8,12 +8,10 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="netty-client" />
+        <module name="netty-common" />
         <module name="netty-server" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="netty-common" target="8" />
-    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">

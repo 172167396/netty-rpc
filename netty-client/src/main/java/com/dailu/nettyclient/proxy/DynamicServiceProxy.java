@@ -1,7 +1,6 @@
 package com.dailu.nettyclient.proxy;
 
 import com.dailu.nettyclient.config.ClientInitConfig;
-import com.dailu.nettyclient.handler.NettyClientHandler;
 import com.dailu.nettyclient.utils.ApplicationContextHolder;
 import com.dailu.nettycommon.dto.RequestInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,10 +8,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
+import org.springframework.util.ObjectUtils;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.concurrent.Future;
-
 
 
 @Slf4j
@@ -43,7 +42,10 @@ public class DynamicServiceProxy implements MethodInterceptor {
             return type.newInstance();
         }
         Type returnType = method.getAnnotatedReturnType().getType();
-        return objectMapper.readValue(result, (Class<?>)returnType);
+        if (ObjectUtils.isEmpty(result)) {
+            return ((Class<?>) returnType).newInstance();
+        }
+        return objectMapper.readValue(result, (Class<?>) returnType);
     }
 
 }
