@@ -15,13 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 由于需要在 handler 中发送消息给服务端，并且将服务端返回的消息读取后返回给消费者
- * 所以实现了 Callable 接口，这样可以运行有返回值的线程
- */
 @Slf4j
-@NoArgsConstructor
-@AllArgsConstructor
 public class NettyClientHandler extends ChannelInboundHandlerAdapter {
 
     public static ChannelHandlerContext context;
