@@ -52,7 +52,7 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
         try {
             String s = (String) msg;
             log.debug("handler 1 received " + s);
-            ObjectMapper objectMapper = ApplicationContextHolder.getBean(ObjectMapper.class).orElseGet(ObjectMapper::new);
+            ObjectMapper objectMapper = ApplicationContextHolder.getObjectMapper();
             RequestInfo requestInfo = objectMapper.readValue(s, RequestInfo.class);
             //确认是rpc调用才往下执行
             if (requestInfo != null && "#rpc#".equals(requestInfo.getProtocol())) {

@@ -13,12 +13,19 @@ public class RpcClientFactoryBean implements FactoryBean<Object> {
 
     private final String destiny;
 
+    private Object instance = null;
+
+
     @Override
-    public Object getObject() {
+    public synchronized Object getObject() {
+        if (instance != null) {
+            return instance;
+        }
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(classType);
         enhancer.setCallback(new DynamicServiceProxy(destiny));
-        return enhancer.create();
+        instance = enhancer.create();
+        return instance;
     }
 
 
@@ -29,6 +36,6 @@ public class RpcClientFactoryBean implements FactoryBean<Object> {
 
     @Override
     public boolean isSingleton() {
-        return false;
+        return true;
     }
 }

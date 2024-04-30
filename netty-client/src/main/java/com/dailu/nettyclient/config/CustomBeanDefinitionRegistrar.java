@@ -1,5 +1,6 @@
 package com.dailu.nettyclient.config;
 
+import com.dailu.nettyclient.NettyClientApplication;
 import com.dailu.nettyclient.aspect.annotation.RpcClient;
 import com.dailu.nettyclient.factory.RpcClientFactoryBean;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
@@ -23,14 +24,15 @@ public class CustomBeanDefinitionRegistrar implements ImportBeanDefinitionRegist
         ClassPathScanningCandidateComponentProvider provider = getScanner();
         //设置扫描器
         provider.addIncludeFilter(new AnnotationTypeFilter(RpcClient.class));
+        String packageName = NettyClientApplication.class.getPackage().toString().split(" ")[1];
         //扫描此包下的所有带有@RpcClient的注解的类
-        Set<BeanDefinition> beanDefinitionSet = provider.findCandidateComponents("com.dailu.nettyclient.rpc");
+        Set<BeanDefinition> beanDefinitionSet = provider.findCandidateComponents(packageName);
         for (BeanDefinition beanDefinition : beanDefinitionSet) {
             if (beanDefinition instanceof AnnotatedBeanDefinition) {
                 //获得注解上的参数信息
                 AnnotatedBeanDefinition annotatedBeanDefinition = (AnnotatedBeanDefinition) beanDefinition;
                 String beanClassAllName = beanDefinition.getBeanClassName();
-                if(beanClassAllName == null) continue;
+                if (beanClassAllName == null) continue;
                 Map<String, Object> paraMap = annotatedBeanDefinition.getMetadata()
                         .getAnnotationAttributes(RpcClient.class.getCanonicalName());
                 //将RpcClient的工厂类注册进去
@@ -39,8 +41,8 @@ public class CustomBeanDefinitionRegistrar implements ImportBeanDefinitionRegist
                 //设置RpcClientFactoryBean工厂类中的构造函数的值
                 //这里的string className会变成Class<?>赋给RpcClientFactoryBean构造函数
                 builder.addConstructorArgValue(beanClassAllName);
-                if(!ObjectUtils.isEmpty(paraMap)){
-                    builder.addConstructorArgValue(paraMap.getOrDefault("destiny",""));
+                if (!ObjectUtils.isEmpty(paraMap)) {
+                    builder.addConstructorArgValue(paraMap.getOrDefault("destiny", ""));
                 }
                 builder.getBeanDefinition().setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
                 //将其注册进容器中

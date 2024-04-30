@@ -12,10 +12,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * 由于需要在 handler 中发送消息给服务端，并且将服务端返回的消息读取后返回给消费者
- * 所以实现了 Callable 接口，这样可以运行有返回值的线程
- */
+
 @Slf4j
 @Setter
 public class AnotherHandler extends ChannelInboundHandlerAdapter {

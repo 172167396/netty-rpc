@@ -1,17 +1,18 @@
 package com.dailu.nettyclient;
 
-import com.dailu.nettyclient.config.CustomBeanDefinitionRegistrar;
+import com.dailu.nettyclient.aspect.annotation.EnableRpcClient;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-@Import(CustomBeanDefinitionRegistrar.class)
 @EnableAsync
+@EnableRpcClient
+@EnableScheduling
 public class NettyClientApplication {
 
     public static void main(String[] args) {
@@ -19,7 +20,7 @@ public class NettyClientApplication {
     }
 
     @Bean
-    public ObjectMapper objectMapper(){
+    public ObjectMapper objectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return objectMapper;

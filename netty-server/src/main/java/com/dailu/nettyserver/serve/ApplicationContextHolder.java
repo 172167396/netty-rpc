@@ -1,5 +1,6 @@
 package com.dailu.nettyserver.serve;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -26,6 +27,10 @@ public class ApplicationContextHolder implements ApplicationContextAware, Initia
     public static <T> T requireBean(Class<T> tClass) {
         return Optional.of(applicationContext.getBean(tClass))
                 .orElseThrow(() -> new RuntimeException("无法获取bean:" + tClass));
+    }
+
+    public static ObjectMapper getObjectMapper() {
+        return Optional.of(applicationContext.getBean(ObjectMapper.class)).orElseGet(ObjectMapper::new);
     }
 
     @Override

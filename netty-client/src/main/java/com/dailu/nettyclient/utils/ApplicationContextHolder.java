@@ -7,7 +7,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class ApplicationContextHolder implements ApplicationContextAware, InitializingBean {
@@ -24,6 +27,10 @@ public class ApplicationContextHolder implements ApplicationContextAware, Initia
         return Optional.of(applicationContext.getBean(tClass));
     }
 
+
+    public static <T> T requireBean(Class<T> tClass){
+        return applicationContext.getBean(tClass);
+    }
     public static ObjectMapper getObjectMapper(){
         return getBean(ObjectMapper.class).orElseGet(ObjectMapper::new);
     }
@@ -32,4 +39,19 @@ public class ApplicationContextHolder implements ApplicationContextAware, Initia
     public void afterPropertiesSet() {
         System.out.println("applicationContextHolder初始化......");
     }
+
+    public static void main(String[] args) {
+        ConcurrentHashMap<String,String> map = new ConcurrentHashMap<>();
+        map.put("3Qj","1");
+        map.put("2pj","2");
+
+        Iterator<Map.Entry<String, String>> iterator = map.entrySet().iterator();
+        while(iterator.hasNext()) {
+            Map.Entry<String, String> entry = iterator.next();
+            System.out.println(entry.getKey());
+            System.out.println(entry.getValue());
+        }
+
+    }
+
 }
