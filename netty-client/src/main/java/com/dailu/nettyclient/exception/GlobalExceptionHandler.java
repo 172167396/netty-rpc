@@ -19,7 +19,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 @Slf4j
 @ControllerAdvice
-public class ExceptionControllerAdvice {
+public class GlobalExceptionHandler {
 
     private static final String FORBIDDEN = "403";
     private static final String LOGIN = "login";
@@ -30,7 +30,7 @@ public class ExceptionControllerAdvice {
     /**
      * CustomerException 异常捕获
      */
-    @ExceptionHandler({CustomerException.class})
+    @ExceptionHandler({CustomException.class})
     @ResponseBody
     public Object handle(Exception ex, HttpServletRequest req) {
         log.error("业务异常", ex);
@@ -82,7 +82,6 @@ public class ExceptionControllerAdvice {
     }
 
     private boolean isAjax(HttpServletRequest req) {
-        //判断是否为ajax请求，默认不是
         return "XMLHttpRequest".equalsIgnoreCase(req.getHeader("x-requested-with"));
     }
 }

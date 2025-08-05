@@ -12,6 +12,7 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 
 import java.util.Map;
@@ -24,9 +25,9 @@ public class CustomBeanDefinitionRegistrar implements ImportBeanDefinitionRegist
         ClassPathScanningCandidateComponentProvider provider = getScanner();
         //设置扫描器
         provider.addIncludeFilter(new AnnotationTypeFilter(RpcClient.class));
-        String packageName = NettyClientApplication.class.getPackage().toString().split(" ")[1];
         //扫描此包下的所有带有@RpcClient的注解的类
-        Set<BeanDefinition> beanDefinitionSet = provider.findCandidateComponents(packageName);
+        String basePackage = ClassUtils.getPackageName(importingClassMetadata.getClassName());
+        Set<BeanDefinition> beanDefinitionSet = provider.findCandidateComponents(basePackage);
         for (BeanDefinition beanDefinition : beanDefinitionSet) {
             if (beanDefinition instanceof AnnotatedBeanDefinition) {
                 //获得注解上的参数信息

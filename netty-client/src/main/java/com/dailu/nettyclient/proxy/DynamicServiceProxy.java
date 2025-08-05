@@ -1,7 +1,7 @@
 package com.dailu.nettyclient.proxy;
 
 import com.dailu.nettyclient.config.ClientInitConfig;
-import com.dailu.nettyclient.exception.CustomerException;
+import com.dailu.nettyclient.exception.CustomException;
 import com.dailu.nettyclient.utils.ApplicationContextHolder;
 import com.dailu.nettycommon.dto.RequestInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,7 +40,7 @@ public class DynamicServiceProxy implements MethodInterceptor {
             result = ClientInitConfig.nettyClientHandler.send(requestInfo);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-            throw CustomerException.wrap(e.getMessage(),e);
+            throw CustomException.wrap(e.getMessage(),e);
         }
         Type returnType = method.getAnnotatedReturnType().getType();
         if (ObjectUtils.isEmpty(result)) {

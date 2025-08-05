@@ -22,6 +22,9 @@ public class R<T> {
     private String msg;
 
 
+    public static <T> R<T> success() {
+        return new R<>(null, SUCCESS_CODE, SUCCESS_MSG);
+    }
     public static <T> R<T> success(T data) {
         return new R<>(data, SUCCESS_CODE, SUCCESS_MSG);
     }

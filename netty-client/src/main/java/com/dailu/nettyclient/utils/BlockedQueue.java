@@ -11,12 +11,11 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- *
  * 简单的阻塞队列
  * 默认超时时间为10分钟,超过10分钟没有poll,自动从map删除
  */
 @Slf4j
-public class BlockedQueue<T> {
+public class BlockedQueue<T> implements CustomBlockQueue<T> {
     private final List<T> data = new ArrayList<>(1);
     private final LocalDateTime createTime = LocalDateTime.now();
     private final int expireMinute;
@@ -69,8 +68,6 @@ public class BlockedQueue<T> {
             lock.unlock();
         }
     }
-
-
 
 
     public boolean isExpired() {

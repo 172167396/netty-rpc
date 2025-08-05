@@ -5,6 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.cglib.proxy.Enhancer;
 
+import java.util.HashMap;
+import java.util.Map;
+
 
 @RequiredArgsConstructor
 public class RpcClientFactoryBean implements FactoryBean<Object> {
@@ -13,19 +16,17 @@ public class RpcClientFactoryBean implements FactoryBean<Object> {
 
     private final String destiny;
 
-    private Object instance = null;
+    private final Map<Class<?>, Object> cache = new HashMap<>();
 
 
     @Override
     public synchronized Object getObject() {
-        if (instance != null) {
-            return instance;
-        }
-        Enhancer enhancer = new Enhancer();
-        enhancer.setSuperclass(classType);
-        enhancer.setCallback(new DynamicServiceProxy(destiny));
-        instance = enhancer.create();
-        return instance;
+        return cache.computeIfAbsent(classType, clazz -> {
+            Enhancer enhancer = new Enhancer();
+            enhancer.setSuperclass(classType);
+            enhancer.setCallback(new DynamicServiceProxy(destiny));
+            return enhancer.create();
+        });
     }
 
 
