@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import javax.annotation.Resource;
 
@@ -29,14 +28,12 @@ public class ClientInitConfig implements CommandLineRunner {
     public static NettyClientHandler nettyClientHandler;
     public static AnotherHandler anotherHandler;
     @Resource
-    ThreadPoolTaskExecutor threadPoolTaskExecutor;
-    @Resource
     ObjectMapper objectMapper;
 
     @Async
     @Override
     public void run(String... args) {
-        nettyClientHandler = new NettyClientHandler(threadPoolTaskExecutor, objectMapper);
+        nettyClientHandler = new NettyClientHandler(objectMapper);
         anotherHandler = new AnotherHandler();
         //客户端需要一个事件循环组就可以
         NioEventLoopGroup group = new NioEventLoopGroup(1);

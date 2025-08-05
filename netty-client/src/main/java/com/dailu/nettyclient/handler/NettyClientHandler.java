@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.scheduling.TaskScheduler;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -21,15 +20,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RequiredArgsConstructor
 public class NettyClientHandler extends ChannelInboundHandlerAdapter {
-
-    private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     private final ObjectMapper objectMapper;
 
@@ -91,10 +86,6 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
         try {
             String s = objectMapper.writeValueAsString(requestInfo);
             queueMap.putIfAbsent(requestInfo.getUuid(), CompletableFutureWrapper.newInstance());
-            threadPoolTaskExecutor.submit(new FutureTask<>(() -> {
-                System.out.println(1);
-                return 1;
-            }));
             context.writeAndFlush(s);
             log.info("client发出数据:" + s);
             ResponseInfo responseInfo = takeRpcResponse(requestInfo.getUuid());
