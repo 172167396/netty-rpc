@@ -13,6 +13,7 @@ import org.springframework.util.ObjectUtils;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.concurrent.TimeUnit;
 
 
 @Slf4j
@@ -37,7 +38,7 @@ public class DynamicServiceProxy implements MethodInterceptor {
         requestInfo.setParams(args);
         String result;
         try {
-            result = ClientInitConfig.nettyClientHandler.send(requestInfo);
+            result = ClientInitConfig.nettyClientHandler.sendSync(requestInfo, 30, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw CustomException.wrap(e.getMessage(),e);

@@ -1,5 +1,6 @@
 package com.dailu.nettyclient.handler;
 
+import com.dailu.nettyclient.exception.AcquireResultTimeoutException;
 import com.dailu.nettyclient.exception.CustomException;
 import com.dailu.nettyclient.model.dto.CompletableFutureWrapper;
 import com.dailu.nettyclient.utils.ApplicationContextHolder;
@@ -7,11 +8,12 @@ import com.dailu.nettycommon.dto.RequestInfo;
 import com.dailu.nettycommon.dto.ResponseInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.lang.Nullable;
 import org.springframework.scheduling.TaskScheduler;
 
 import java.time.Duration;
@@ -19,8 +21,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -82,35 +87,69 @@ public class NettyClientHandler extends ChannelInboundHandlerAdapter {
         log.error(cause.getMessage(), cause);
     }
 
-    public String send(RequestInfo requestInfo) {
+    public CompletableFuture<String> send(RequestInfo requestInfo) {
+        String requestId = requestInfo.getUuid();
+        CompletableFutureWrapper<ResponseInfo> wrapper = CompletableFutureWrapper.newInstance();
+        queueMap.put(requestId, wrapper);
+
+        String s;
         try {
-            String s = objectMapper.writeValueAsString(requestInfo);
-            queueMap.putIfAbsent(requestInfo.getUuid(), CompletableFutureWrapper.newInstance());
-            context.writeAndFlush(s);
-            log.info("client发出数据:" + s);
-            ResponseInfo responseInfo = takeRpcResponse(requestInfo.getUuid());
-            if (responseInfo == null) {
-                return null;
-            }
-            return objectMapper.writeValueAsString(responseInfo.getResult());
+            s = objectMapper.writeValueAsString(requestInfo);
         } catch (JsonProcessingException e) {
+            queueMap.remove(requestId);
+            wrapper.clear();
             throw CustomException.wrap(e.getMessage(), e);
         }
+
+        ChannelFuture channelFuture = context.writeAndFlush(s);
+        log.info("client发出数据:{}", s);
+
+        // 发送失败时立即清理，避免 Map 泄漏
+        channelFuture.addListener((ChannelFutureListener) f -> {
+            if (!f.isSuccess()) {
+                queueMap.remove(requestId);
+                wrapper.completeExceptionally(f.cause());
+                wrapper.clear();
+            }
+        });
+
+        return wrapper.getFuture()
+                .thenApply(responseInfo -> {
+                    try {
+                        return objectMapper.writeValueAsString(responseInfo.getResult());
+                    } catch (JsonProcessingException e) {
+                        throw CustomException.wrap(e.getMessage(), e);
+                    }
+                })
+                .whenComplete((result, ex) -> {
+                    // 无论成功/失败/超时，保证清理 Map
+                    queueMap.remove(requestId);
+                    wrapper.clear();
+                });
     }
 
     /**
-     * 获取响应结果,默认超时时间30秒,超过30秒抛出AcquireResultTimeoutException
+     * 同步发送请求并阻塞等待响应，内部调用 {@link #send(RequestInfo)} 后 .get(timeout, unit)
      *
-     * @param requestId 请求ID
+     * @param requestInfo 请求信息
+     * @param timeout     超时时间
+     * @param unit        时间单位
+     * @return 响应 JSON 字符串
      */
-    @Nullable
-    public ResponseInfo takeRpcResponse(String requestId) {
-        ResponseInfo responseInfo = Optional.ofNullable(queueMap.get(requestId)).map(futureWrapper -> {
-            ResponseInfo res = futureWrapper.get(futureWrapper.getTimeoutSeconds() - 1, TimeUnit.SECONDS);
-            futureWrapper.clear();
-            return res;
-        }).orElse(null);
-        queueMap.remove(requestId);
-        return responseInfo;
+    public String sendSync(RequestInfo requestInfo, long timeout, TimeUnit unit) {
+        try {
+            return send(requestInfo).get(timeout, unit);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw CustomException.wrap("线程被中断", e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof CustomException) {
+                throw (CustomException) cause;
+            }
+            throw CustomException.wrap(cause != null ? cause.getMessage() : e.getMessage(), cause != null ? cause : e);
+        } catch (TimeoutException e) {
+            throw new AcquireResultTimeoutException("获取结果超时", e);
+        }
     }
 }
